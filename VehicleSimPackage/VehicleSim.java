@@ -14,21 +14,22 @@ public class VehicleSim extends JPanel {
     static final GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
     static final int width = gd.getDisplayMode().getWidth()-100;
     static final int height = gd.getDisplayMode().getHeight()-100;
-    static final int pxPerMeter = height/10;
+    static final int pxPerMeter = height/20;
 
     static Timer timer;
     static ArrayList<String> keysPressed = new ArrayList<String>();
 
     static final double maxAcceleration = 3;
     static final double maxDeceleration  = 9.6;
+    static final double wheelTurnSpeed  = 3;
     static final double deltaTime = 0.020;
 
     static final Image carImg = Toolkit.getDefaultToolkit().getImage("VehicleSimPackage/Charger.png");
-    static final Image wheelImg = Toolkit.getDefaultToolkit().getImage("VehicleSimPackage/Charger.png");
+    static final Image wheelImg = Toolkit.getDefaultToolkit().getImage("VehicleSimPackage/Wheel.png");
 
     static Car car = new Car(width/pxPerMeter/2, height/pxPerMeter/2, Math.toRadians(20), 5, 2.2, carImg);
-    static Wheel frontWheel = new Wheel(1.5, 40);
-    static Wheel rearWheel = new Wheel(-1.5, 0);
+    static Wheel frontWheel = new Wheel(1.5, Math.toRadians(40), 0.76, wheelImg);
+    static Wheel rearWheel = new Wheel(-1.5, 0, 0.76, wheelImg);
 
 
     //Key Listener Setup---------------------------------------------------------------------------
@@ -96,6 +97,15 @@ public class VehicleSim extends JPanel {
             car.xVel = Math.max(car.xVel-maxDeceleration*Math.cos(car.rotation_rad)*deltaTime, 0);
             car.yVel = Math.max(car.yVel-maxDeceleration*Math.sin(car.rotation_rad)*deltaTime, 0);
         }
+        if (keysPressed.contains("A")) {
+            frontWheel.steerAngle = Math.min(frontWheel.steerAngle+deltaTime*wheelTurnSpeed, frontWheel.maxSteerRad);
+        }
+        else if (keysPressed.contains("D")) {
+            frontWheel.steerAngle = Math.max(frontWheel.steerAngle-deltaTime*wheelTurnSpeed, -frontWheel.maxSteerRad);
+        }
+        else {
+            frontWheel.steerAngle = Math.max(Math.abs(frontWheel.steerAngle)-deltaTime*wheelTurnSpeed, 0)*Math.signum(frontWheel.steerAngle);
+        }
 
         car.xPos += car.xVel;
         car.yPos += car.yVel;
@@ -111,13 +121,18 @@ public class VehicleSim extends JPanel {
             setBackground(Color.GRAY);
 
             drawRotatedImage(g2d, car.img, car.rotation_rad, (int)(car.xPos*pxPerMeter), height-(int)(car.yPos*pxPerMeter), (int)(car.lenght*pxPerMeter), (int)(car.width*pxPerMeter));
+            drawRotatedImage(g2d, frontWheel.img, car.rotation_rad+frontWheel.steerAngle, (int)((car.xPos+frontWheel.xDistToCOM*Math.cos(car.rotation_rad))*pxPerMeter), height-(int)((car.yPos+frontWheel.xDistToCOM*Math.sin(car.rotation_rad))*pxPerMeter), (int)(frontWheel.diameter*pxPerMeter), (int)(frontWheel.diameter*pxPerMeter));
+            drawRotatedImage(g2d, rearWheel.img, car.rotation_rad+rearWheel.steerAngle, (int)((car.xPos+rearWheel.xDistToCOM*Math.cos(car.rotation_rad))*pxPerMeter), height-(int)((car.yPos+rearWheel.xDistToCOM*Math.sin(car.rotation_rad))*pxPerMeter), (int)(rearWheel.diameter*pxPerMeter), (int)(rearWheel.diameter*pxPerMeter));
+        
+            g2d.drawLine(width/2, 0, width/2, height);
+            g2d.drawLine(0, height/2, width, height/2);
         }
     }
 
     public static void drawRotatedImage(Graphics2D g2d, Image image, double angle_rad, int x, int y, int width, int height){  
         AffineTransform baseTransform = g2d.getTransform();
         g2d.setTransform(AffineTransform.getRotateInstance(-angle_rad, x, y));
-        g2d.drawImage(image, x-image.getWidth(null)/2, y-image.getHeight(null)/2, width, height, null);
+        g2d.drawImage(image, x-width/2, y-height/2, width, height, null);
         g2d.setTransform(baseTransform);
     }  
 
@@ -149,16 +164,20 @@ public class VehicleSim extends JPanel {
     static class Wheel {              
         public double xDistToCOM;
         public double steerAngle;
-        public double maxSteerAngle;
+        public double maxSteerRad;
         public double slipAngle;
         public double lateralForce;
+        public double diameter;
+        public Image img;
 
-        public Wheel(double xDistToCOM, double maxSteerAngle) {
+        public Wheel(double xDistToCOM, double maxSteerRad, double diameter, Image img) {
             this.xDistToCOM = xDistToCOM;
             this.steerAngle = 0;
-            this.maxSteerAngle = maxSteerAngle;
+            this.maxSteerRad = maxSteerRad;
             this.slipAngle = 0;
             this.lateralForce = 0;
+            this.diameter = diameter;
+            this.img = img;
         }
     }
 
